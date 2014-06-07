@@ -19,10 +19,12 @@ object RuleGenerators {
 
   val move: Gen[Move] = Gen.oneOf(Cooperate, Defect)
   implicit val arbMoves: Arbitrary[Move] = Arbitrary(move)
+
 }
 
 object GameTest extends Properties("Prisoners Dilemma") {
   import Prop._
+  import Gen._
   import RuleGenerators._
   property("Defection is always better for me") =
      forAll {(rules: Rules, theirMove: Move) =>
@@ -31,5 +33,13 @@ object GameTest extends Properties("Prisoners Dilemma") {
 
        ifIDefect > ifICooperate
      }
+
+  property("The game is fair") =
+    forAll {(rules: Rules, moves: MoveSet) =>
+      val oneWay = Rules.score(rules, moves)
+      val theOtherWay = Rules.score(rules, moves.swap)
+
+      oneWay.swap == theOtherWay
+    }
 
 }
