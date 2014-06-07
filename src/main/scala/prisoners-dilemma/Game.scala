@@ -12,7 +12,7 @@ object Rules {
       case (Defect, Cooperate) =>
         (rules.temptationToDefect, rules.suckersPenalty)
       case (Cooperate, Defect) =>
-        (rules.suckersPenalty, 0)//rules.temptationToDefect)
+        (rules.suckersPenalty, rules.temptationToDefect)
       case (Cooperate, Cooperate) =>
         (rules.rewardForMutualCooperation, rules.rewardForMutualCooperation)
       case (Defect, Defect) =>
