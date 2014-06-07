@@ -4,18 +4,15 @@ import org.scalacheck._
 
 object RuleGenerators {
 
-  val ruleGen: Gen[Rules] = for {
-     t <- Gen.choose(0, 10)
-     r <- Gen.choose(0, 10)
-     p <- Gen.choose(0, 10)
-     s <- Gen.choose(0, 10)
-     if (t > r) // todo: check against
-     if (r > p)
-     if (p > s)
+  def ruleGen(max: Points): Gen[Rules] = for {
+     t <- Gen.choose(3, max)
+     r <- Gen.choose(2, (t - 1))
+     p <- Gen.choose(1, (r - 1))
+     s <- Gen.choose(0, (p - 1))
      if (2 * r > (t + s))
   } yield Rules(t, r, p, s)
 
-  implicit val arbRules: Arbitrary[Rules] = Arbitrary(ruleGen)
+  implicit val arbRules: Arbitrary[Rules] = Arbitrary(ruleGen(100))
 
   val move: Gen[Move] = Gen.oneOf(Cooperate, Defect)
   implicit val arbMoves: Arbitrary[Move] = Arbitrary(move)
