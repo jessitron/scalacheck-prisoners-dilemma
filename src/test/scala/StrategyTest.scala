@@ -17,7 +17,7 @@ object StrategyGen {
     }
   }
 
-  val strategyGen:Gen[Strategy] = infiniteStream(RuleGenerators.move) map (Strategy.fromStream _)
+  val strategyGen:Gen[Strategy] = infiniteStream(RuleGenerators.move) map (Strategy.fromStream(_))
 
 }
 
@@ -38,7 +38,7 @@ object StrategyProperties extends Properties("Various known strategies") {
   property("The sucker always cooperates") = forAll(strategyGen, Gen.posNum[Int]) { (opponent: Strategy, turns: Int) =>
     val allMoves = Strategy.moves(Strategy.sucker, opponent)
     val myMoves = allMoves.map (_._1)
-    myMoves.take(turns).forall(_ == Cooperate)
+    myMoves.take(turns).forall(_ == Cooperate) :| "The sucker defected OMG!!"
   }
 
 

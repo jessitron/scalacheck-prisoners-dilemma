@@ -11,25 +11,20 @@ object Strategy {
   def moves(p1: Strategy, p2: Strategy): Stream[MoveSet] =
     (p1.currentMove, p2.currentMove) #:: moves(p1.next(p2.currentMove), p2.next(p1.currentMove))
 
-  def stringCatting(s: Strategy, log: String): Strategy = new Strategy {
-     val currentMove = s.currentMove
-     def next(opponentMove: Move) = stringCatting(s.next(opponentMove), (s"did $currentMove; "))
-
-     override def toString: String = log + s.toString
-  }
-
-  def fromStream(moves: Stream[Move]): Strategy = moves match {
+  def fromStream(moves: Stream[Move],paren:String = "Reading from a stream. "): Strategy = moves match {
     case head #:: tail => new Strategy {
       val currentMove = head
-      def next(x: Move) = stringCatting(fromStream(tail), s" about to $currentMove")
+      def next(x: Move) = fromStream(tail,toString)
 
-      override def toString = "Reading from a stream." + super.toString
+      override def toString = paren+s",$currentMove"
     }
   }
 
   val sucker: Strategy = new Strategy {
      val currentMove = Defect
      def next(x: Move) = this
+
+     override def toString = "Sucker!!"
   }
 
 }
