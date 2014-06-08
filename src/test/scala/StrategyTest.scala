@@ -8,6 +8,16 @@ object StrategyGen {
   def streamOfN[T](n: Int, g: Gen[T]): Gen[Stream[T]] = Gen.containerOfN[Stream, T](n, g)
   //val randomStrategy: Gen[Strategy] =
 
+  def infiniteStream[T](g: Gen[T]) = const("poo") map {
+    (_) => {
+      def streaminate(gen: Gen[T]): Stream[Option[T]] =
+        gen.sample #:: streaminate(gen)
+
+      streaminate(g).flatten
+    }
+  }
+
+  val strategyGen:Gen[Strategy] = infiniteStream(RuleGenerators.move) map (Strategy.fromStream _)
 
 }
 
@@ -15,8 +25,6 @@ object StrategyProperties extends Properties("Various known strategies") {
   import Prop._
   import RuleGenerators._
   import StrategyGen._
-
-
 
   property("Two random streams of moves are played out") = forAll(Gen.posNum[Int]) { (turns: Int) =>
     val moveStreamGenerator = streamOfN(turns, RuleGenerators.move)
@@ -27,7 +35,11 @@ object StrategyProperties extends Properties("Various known strategies") {
     }
   }
 
-  //property("Sucker always says true") = { (opponent: Strategy)
-  //}
+  property("The sucker always cooperates") = forAll(strategyGen, Gen.posNum[Int]) { (opponent: Strategy, turns: Int) =>
+    val allMoves = Strategy.moves(Strategy.sucker, opponent)
+    val myMoves = allMoves.map (_._1)
+    myMoves.take(turns).forall(_ == Cooperate)
+  }
+
 
 }
