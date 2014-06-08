@@ -10,7 +10,10 @@ object RuleGenerators {
      p <- Gen.choose(1, (r - 1))
      s <- Gen.choose(0, (p - 1))
      if (2 * r > (t + s))
-  } yield Rules(t, r, p, s)
+  } yield Rules(temptationToDefect = t,
+                rewardForMutualCooperation = r,
+                punishmentForMutualDefection = p,
+                suckersPenalty = s)
 
   implicit val arbRules: Arbitrary[Rules] = Arbitrary(ruleGen(100))
 
@@ -30,6 +33,17 @@ object GameTest extends Properties("Prisoners Dilemma") {
 
        ifIDefect > ifICooperate
      }
+
+  property("The best possible global outcome is both cooperate") =
+    forAll{ (rules: Rules, moves: MoveSet) =>
+      (moves != (Cooperate, Cooperate)) ==> {
+        val bestResult = Rules.score(rules, (Cooperate, Cooperate))
+        val myResult = Rules.score(rules, moves)
+        total(bestResult) > total(myResult)
+      }
+    }
+
+  def total(scores: ScoreSet) = scores._1 + scores._2
 
   property("The game is fair") =
     forAll {(rules: Rules, moves: MoveSet) =>
