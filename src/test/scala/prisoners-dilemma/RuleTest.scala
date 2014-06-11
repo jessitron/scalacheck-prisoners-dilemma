@@ -15,14 +15,14 @@ object RuleGenerators {
                 punishmentForMutualDefection = p,
                 suckersPenalty = s)
 
-  implicit val arbRules: Arbitrary[Rules] = Arbitrary(ruleGen(100))
+  implicit val arbRules: Arbitrary[Rules] = Arbitrary(ruleGen(Int.MaxValue))
 
   val move: Gen[Move] = Gen.oneOf(Cooperate, Defect)
   implicit val arbMoves: Arbitrary[Move] = Arbitrary(move)
 
 }
 
-object GameTest extends Properties("Prisoners Dilemma") {
+object RuleTest extends Properties("Prisoners Dilemma") {
   import Prop._
   import Gen._
   import RuleGenerators._

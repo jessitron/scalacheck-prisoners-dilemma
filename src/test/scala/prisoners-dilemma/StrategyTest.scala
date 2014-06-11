@@ -19,6 +19,8 @@ object StrategyGen {
 
   val strategyGen:Gen[Strategy] = infiniteStream(RuleGenerators.move) map (Strategy.fromStream(_)) map (Strategy.recording(_))
 
+  implicit val arbStrategy = Arbitrary(strategyGen)
+
 }
 
 object StrategyProperties extends Properties("Various known strategies") {

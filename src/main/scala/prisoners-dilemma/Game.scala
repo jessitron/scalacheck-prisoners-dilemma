@@ -19,3 +19,13 @@ object Rules {
         (rules.punishmentForMutualDefection, rules.punishmentForMutualDefection)
     }
 }
+
+case class Player(name: String, strategy: Strategy)
+
+case class Outcome(player: Player, opponent: Player, score: Points, myMoves: Seq[Move], opponentMoves:Seq[Move])
+
+object Game {
+
+  def oneOnOne(rules:Rules, turns: Int)(p1: Player, p2:Player): (Outcome, Outcome) = ???
+
+}
