@@ -43,5 +43,18 @@ object StrategyProperties extends Properties("Various known strategies") {
     myMoves.forall(_ == Cooperate) :| s"The sucker defected OMG!! Here's the story: ${allMoves.toList}"
   }
 
+  property("Tit for Tat copies the prior move, and starts with Cooperate") =
+    forAll(strategyGen, Gen.posNum[Int]) {
+      (opponent:Strategy, turns: Int) =>
+      val allMoves = Strategy.moves(Strategy.titForTat, opponent).take(turns)
+      val myFirstMove = allMoves.head._1
+      val myMovesExceptTheFirst = allMoves.map(_._1).tail
+      val theirMovesExceptTheLast = allMoves.map(_._2).take(turns - 1)
+
+      (myFirstMove =? Cooperate) &&
+      (myMovesExceptTheFirst =? theirMovesExceptTheLast)
+
+    }
+
 
 }

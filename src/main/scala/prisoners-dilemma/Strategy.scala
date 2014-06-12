@@ -34,4 +34,12 @@ object Strategy {
      override def toString = "Sucker!!"
   }
 
+  def chooseBasedOnTheirMove(myMove: Move, choice: Move => Move):Strategy =
+    new Strategy {
+      val currentMove = myMove
+      def next(theirMove: Move) =
+        chooseBasedOnTheirMove(choice(theirMove), choice)
+    }
+
+  val titForTat: Strategy = chooseBasedOnTheirMove(Cooperate, (m) => m)
 }
