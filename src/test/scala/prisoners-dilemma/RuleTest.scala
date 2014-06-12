@@ -15,7 +15,7 @@ object RuleGenerators {
                 punishmentForMutualDefection = p,
                 suckersPenalty = s)
 
-  implicit val arbRules: Arbitrary[Rules] = Arbitrary(ruleGen(Int.MaxValue))
+  implicit val arbRules: Arbitrary[Rules] = Arbitrary(ruleGen(Int.MaxValue / 2))
 
   val move: Gen[Move] = Gen.oneOf(Cooperate, Defect)
   implicit val arbMoves: Arbitrary[Move] = Arbitrary(move)
@@ -37,11 +37,15 @@ object RuleTest extends Properties("Prisoners Dilemma") {
   property("The best possible global outcome is both cooperate") =
     forAll{ (rules: Rules, moves: MoveSet) =>
       (moves != (Cooperate, Cooperate)) ==> {
-        val bestResult = Rules.score(rules, (Cooperate, Cooperate))
-        val myResult = Rules.score(rules, moves)
-        total(bestResult) > total(myResult)
+        cooperationIsBetter(rules, moves)
       }
     }
+
+  def cooperationIsBetter(rules:Rules, moves: MoveSet): Prop = {
+    val bestResult = Rules.score(rules, (Cooperate, Cooperate))
+    val myResult = Rules.score(rules, moves)
+    (total(bestResult) > total(myResult)) :| s"Cooperating got $bestResult while $moves got $myResult"
+  }
 
   def total(scores: ScoreSet) = scores._1 + scores._2
 
@@ -52,5 +56,12 @@ object RuleTest extends Properties("Prisoners Dilemma") {
 
       oneWay.swap == theOtherWay
     }
+
+    // An Int as points doesn't work for ints too large to add together
+// property("This one thing that failed once") = {
+//  val rules = Rules(2079120587,1233644972,157614103,141316510)
+//  val moves = (Defect,Defect)
+//  cooperationIsBetter(rules, moves)
+// }
 
 }

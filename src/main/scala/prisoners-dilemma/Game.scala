@@ -26,6 +26,10 @@ case class Outcome(player: Player, opponent: Player, score: Points, myMoves: Seq
 
 object Game {
 
-  def oneOnOne(rules:Rules, turns: Int)(p1: Player, p2:Player): (Outcome, Outcome) = ???
+  def oneOnOne(rules:Rules, turns: Int)(p1: Player, p2:Player): (Outcome, Outcome) = {
+    val p1Outcome = Outcome(p1, p2, 0, Seq(), Seq())
+    val p2Outcome = Outcome(p2, p1, 0, Seq(), Seq())
+    (p1Outcome, p2Outcome)
+  }
 
 }

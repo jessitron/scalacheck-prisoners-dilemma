@@ -36,7 +36,7 @@ object GameTest extends Properties("An iterated game of Prisoners Dilemma") {
 
       val (outcome1, outcome2) = Game.oneOnOne(rules, turns)(p1, p2)
 
-     val minPossibleScore = rules.suckersPenalty * turns
+      val minPossibleScore = rules.suckersPenalty * turns
       val maxPossibleScore = rules.temptationToDefect * turns
       val maxGlobalScore = rules.rewardForMutualCooperation * turns * 2
 
