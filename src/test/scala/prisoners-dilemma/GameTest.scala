@@ -12,6 +12,8 @@ object GameGen {
   } yield Player(name, strategy)
 
   implicit val arbPlayer = Arbitrary(playerGen)
+
+  val someTurns: Gen[Int] = Gen.choose(0, 100)
 }
 
 object GameTest extends Properties("An iterated game of Prisoners Dilemma") {
@@ -20,7 +22,8 @@ object GameTest extends Properties("An iterated game of Prisoners Dilemma") {
   import RuleGenerators._
   import Prop._
 
-  property("The results are fairly reported") = forAll(playerGen, playerGen, ruleGen(100), Gen.posNum[Int]) {
+  property("The results are fairly reported") =
+    forAll(playerGen, playerGen, ruleGen(100), someTurns) {
     (p1: Player, p2: Player, rules: Rules, turns: Int) =>
 
       val (outcome1, outcome2) = Game.oneOnOne(rules, turns)(p1, p2)
@@ -32,7 +35,10 @@ object GameTest extends Properties("An iterated game of Prisoners Dilemma") {
   }
 
   property("The results are consistent with the rules") = forAll {
-    (p1: Player, p2: Player, rules: Rules, turns: Int) =>
+    (p1: Player, p2: Player) =>
+      forAll(someTurns) { turns =>
+        val reasonableScore = if (turns == 0) Int.MaxValue else (Int.MaxValue / (turns * 2))
+        forAll(ruleGen(reasonableScore)) { rules =>
 
       val (outcome1, outcome2) = Game.oneOnOne(rules, turns)(p1, p2)
 
@@ -47,15 +53,16 @@ object GameTest extends Properties("An iterated game of Prisoners Dilemma") {
 
       val totalScore = allOutcomes.map(_.score).sum
 
-
-      Prop.all(Seq(outcome1, outcome2).map(_.score).map(score =>
+      val eachScoreIsReasonable: Prop =
+        Prop.all(Seq(outcome1, outcome2).map(_.score).map(score =>
             (score <= maxPossibleScore && score >= minPossibleScore) :| s"Score of $score is impossible"
-          ): _*) &&
-      (((totalScore) <= maxGlobalScore) :| s"Total score of ${totalScore} is impossible") &&
-      (maxDefections == maxScore) :| "Wait, how did you score higher without defecting?"
+          ): _*)
+      val totalScoreIsReasonable: Prop = ((totalScore) <= maxGlobalScore) :| s"Total score of ${totalScore} is impossible"
+      val defectionsHelpYou: Prop = (maxDefections == maxScore) :| "Wait, how did you score higher without defecting?"
 
-
-
+      Prop.all(eachScoreIsReasonable, totalScoreIsReasonable, defectionsHelpYou) :| s"Outcomes:\n$outcome1\n$outcome2 "
+    }
+   }
   }
 
 }
