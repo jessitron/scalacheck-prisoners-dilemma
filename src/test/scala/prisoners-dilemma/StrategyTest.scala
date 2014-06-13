@@ -28,19 +28,25 @@ object StrategyProperties extends Properties("Various known strategies") {
   import RuleGenerators._
   import StrategyGen._
 
-  property("Two random streams of moves are played out") = forAll(Gen.posNum[Int]) { (turns: Int) =>
+  property("Two random streams of moves are played out") = forAll(Gen.posNum[Int])
+  { (turns: Int) =>
     val moveStreamGenerator = streamOfN(turns, RuleGenerators.move)
-    forAll(moveStreamGenerator, moveStreamGenerator) { (stream1: Stream[Move], stream2: Stream[Move]) =>
-      val s1 = Strategy.fromStream(stream1)
-      val s2 = Strategy.fromStream(stream2)
-      Strategy.moves(s1, s2).take(turns).toSeq =? stream1.zip(stream2).take(turns)
+    forAll(moveStreamGenerator, moveStreamGenerator) {
+      (stream1: Stream[Move], stream2: Stream[Move]) =>
+        val s1 = Strategy.fromStream(stream1)
+        val s2 = Strategy.fromStream(stream2)
+        Strategy.moves(s1, s2).take(turns).toSeq =? stream1.zip(stream2).take(turns)
     }
   }
 
-  property("The sucker always cooperates") = forAll(strategyGen, Gen.posNum[Int]) { (opponent: Strategy, turns: Int) =>
-    val allMoves:Stream[MoveSet] = Strategy.moves(Strategy.sucker, opponent).take(turns)
-    val myMoves = allMoves.map (_._1)
-    myMoves.forall(_ == Cooperate) :| s"The sucker defected OMG!! Here's the story: ${allMoves.toList}"
+  property("The sucker always cooperates") =
+    forAll(strategyGen, Gen.posNum[Int]) {
+      (opponent: Strategy, turns: Int) =>
+        val allMoves:Stream[MoveSet] = Strategy.moves(Strategy.sucker, opponent).take(turns)
+        val myMoves = allMoves.map (_._1)
+
+        myMoves.forall(_ == Cooperate) :|
+           s"The sucker defected OMG!! Here's the story: ${allMoves.toList}"
   }
 
   property("Tit for Tat copies the prior move, and starts with Cooperate") =
