@@ -16,6 +16,10 @@ object GameGen {
   val someTurns: Gen[Int] = Gen.choose(0, 100)
 }
 
+object BigGameTest extends Properties("A free for alls") {
+
+}
+
 object GameTest extends Properties("An iterated game of Prisoners Dilemma") {
 
   import GameGen._
@@ -48,19 +52,38 @@ object GameTest extends Properties("An iterated game of Prisoners Dilemma") {
 
       val allOutcomes = Seq(outcome1, outcome2)
 
-      val maxDefections = allOutcomes.maxBy(_.myMoves.count(_ == Defect))
-      val maxScore = allOutcomes.maxBy(_.score)
-
       val totalScore = allOutcomes.map(_.score).sum
 
       val eachScoreIsReasonable: Prop =
         Prop.all(Seq(outcome1, outcome2).map(_.score).map(score =>
-            (score <= maxPossibleScore && score >= minPossibleScore) :| s"Score of $score is impossible"
+            (score <= maxPossibleScore && score >= minPossibleScore) :|
+            s"Score of $score is impossible"
           ): _*)
-      val totalScoreIsReasonable: Prop = ((totalScore) <= maxGlobalScore) :| s"Total score of ${totalScore} is impossible"
-      val defectionsHelpYou: Prop = (maxDefections == maxScore) :| "Wait, how did you score higher without defecting?"
+      val totalScoreIsReasonable: Prop = ((totalScore) <= maxGlobalScore) :|
+                   s"Total score of ${totalScore} is impossible"
 
-      Prop.all(eachScoreIsReasonable, totalScoreIsReasonable, defectionsHelpYou) :| s"Outcomes:\n$outcome1\n$outcome2 "
+      (eachScoreIsReasonable && totalScoreIsReasonable) :|
+            s"Outcomes:\n$outcome1\n$outcome2 "
+    }
+   }
+  }
+
+
+  property("The player that defects the most wins") = forAll {
+    (p1: Player, p2: Player) =>
+      forAll(someTurns) { turns =>
+        val reasonableScore = if (turns == 0) Int.MaxValue else (Int.MaxValue / (turns * 2))
+        forAll(ruleGen(reasonableScore)) { rules =>
+
+          val (outcome1, outcome2) = Game.oneOnOne(rules, turns)(p1, p2)
+          val allOutcomes = Seq(outcome1, outcome2)
+
+          val maxDefections = allOutcomes.maxBy(_.myMoves.count(_ == Defect))
+          val maxScore = allOutcomes.maxBy(_.score)
+
+          (maxDefections == maxScore) :|
+                    "Wait, how did you score higher without defecting?" :|
+                    s"Outcomes:\n$outcome1\n$outcome2 "
     }
    }
   }
