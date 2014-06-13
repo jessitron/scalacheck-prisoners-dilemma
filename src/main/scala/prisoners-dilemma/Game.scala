@@ -1,5 +1,7 @@
 package prisoners_dilemma
 
+import scala.concurrent.duration._
+
 case class Rules(temptationToDefect: Points,
                  rewardForMutualCooperation: Points,
                  punishmentForMutualDefection: Points,
@@ -40,4 +42,5 @@ object Game {
     (p1Outcome, p2Outcome)
   }
 
+  def eachOnEach(rules: Rules)(players: Seq[Player], timeLimit: Duration): Seq[Outcome] = Seq()
 }
