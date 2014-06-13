@@ -16,11 +16,11 @@ object GameGen {
 
   val someTurns: Gen[Int] = Gen.choose(0, 100)
 
-  val reasonableTimeLimit: Gen[Duration] = Gen.choose(100, 1500).map(m => m.millis)
+  val reasonableTimeLimit: Gen[FiniteDuration] = Gen.choose(200, 1500).map(m => m.millis)
   implicit val arbDuration = Arbitrary(reasonableTimeLimit)
 
   val someSlowPlayers: Gen[Seq[Player]] = for {
-    n <- Gen.choose(2, 20)
+    n <- Gen.choose(3, 20)
     list <- listOfN(n, playerGen) // TODO: slowPlayerGen
   } yield list
 }
@@ -29,22 +29,38 @@ object BigGameTest extends Properties("A free-for-all") {
   import Prop._
   import GameGen._
   import RuleGenerators._
+  import akka.actor._
 
-  val fudge = 500.millis
+  val fudge = 300.millis
 
-  def eachPlayerGetsAResult(players: Seq[Player], results: Seq[Outcome]) :Prop =
+  val customConf = com.typesafe.config.ConfigFactory.parseString("""
+      akka {
+        log-dead-letters = 0
+      }
+      """)
+
+  // I should do this in ScalaTest so that I can shut this down
+  val actorSystem = ActorSystem("big-game-test", customConf)
+
+  def eachPlayerGetsAResult(players: Seq[Player], results: Seq[AggregateOutcome]) :Prop =
     (players.length =? results.length) :| "Wrong number of results" &&
     Prop.all(players.map(p => results.exists(_.player == p) :| "No results for $p"):_*)
 
   property("All games end within the time limit") =
     forAll(ruleGen(20) :| "Rules", someSlowPlayers :| "Slow players", reasonableTimeLimit) {
-        (rules: Rules, players: Seq[Player], timeLimit: Duration) =>
+        (rules: Rules, players: Seq[Player], timeLimit: FiniteDuration) =>
+
+      classify(players.size < 10, "small", "large") {
 
       val timer = new Timer()
-      val output = Game.eachOnEach(rules)(players, timeLimit)
+      val output = Game.eachOnEach(rules)(actorSystem, players, timeLimit)
       val timeTaken = timer.check
+      val timeOver = timeTaken - timeLimit
+      classify (timeOver < (fudge/2), "comfortable", "barely") {
       (timeTaken <= (timeLimit + fudge)) :| s"$timeTaken was longer than $timeLimit" &&
       eachPlayerGetsAResult(players, output)
+      }
+      }
     }
 
 }
