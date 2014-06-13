@@ -19,9 +19,9 @@ object GameGen {
   val reasonableTimeLimit: Gen[FiniteDuration] = Gen.choose(200, 1500).map(m => m.millis)
   implicit val arbDuration = Arbitrary(reasonableTimeLimit)
 
-  val someSlowPlayers: Gen[Seq[Player]] = for {
+  val somePlayers: Gen[Seq[Player]] = for {
     n <- Gen.choose(3, 20)
-    list <- listOfN(n, playerGen) // TODO: slowPlayerGen
+    list <- listOfN(n, playerGen)
   } yield list
 }
 
@@ -46,22 +46,22 @@ object BigGameTest extends Properties("A free-for-all") {
     (players.length =? results.length) :| "Wrong number of results" &&
     Prop.all(players.map(p => results.exists(_.player == p) :| "No results for $p"):_*)
 
-  property("All games end within the time limit") =
-    forAll(ruleGen(20) :| "Rules", someSlowPlayers :| "Slow players", reasonableTimeLimit) {
-        (rules: Rules, players: Seq[Player], timeLimit: FiniteDuration) =>
+ property("All games end within the time limit") =
+  forAll(ruleGen(20) :| "Rules", somePlayers :| "Players", reasonableTimeLimit) {
+  (rules: Rules, players: Seq[Player], timeLimit: FiniteDuration) =>
+   classify(players.size < 10, "small", "large") {
 
-      classify(players.size < 10, "small", "large") {
+    val timer = new Timer()
+    val output = Game.eachOnEach(rules)(actorSystem, players, timeLimit)
+    val timeTaken = timer.check
+    val timeOver = timeTaken - timeLimit
 
-      val timer = new Timer()
-      val output = Game.eachOnEach(rules)(actorSystem, players, timeLimit)
-      val timeTaken = timer.check
-      val timeOver = timeTaken - timeLimit
-      classify (timeOver < (fudge/2), "comfortable", "barely") {
-      (timeTaken <= (timeLimit + fudge)) :| s"$timeTaken was longer than $timeLimit" &&
-      eachPlayerGetsAResult(players, output)
-      }
-      }
+    classify (timeOver < (fudge/2), "comfortable", "barely") {
+     (timeTaken <= (timeLimit + fudge)) :| s"$timeTaken was longer than $timeLimit" &&
+     eachPlayerGetsAResult(players, output)
     }
+   }
+  }
 
 }
 
