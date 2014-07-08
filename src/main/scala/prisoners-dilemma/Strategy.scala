@@ -1,10 +1,37 @@
 package prisoners_dilemma
 
-trait Strategy {
+trait Strategizer {
+  def newGame(): RoundStrategy
+}
+
+trait RoundStrategy {
   val currentMove: Move
   def next(opponentMove: Move): Strategy
 
   override def toString: String = s"Next I will $currentMove."
+}
+
+
+class RemoteStrategy(context:ActorContext, firstMove: URI)
+extends Strategizer {
+
+  def newGame() = {
+     // call first URI
+     val (move, uri) = parseResponse("la la ala la ala")
+     new RemoteRoundStrategy(context, move, uri)
+  }
+
+  private def parseResponse(response: String /* what am I */): (Move, URI) = ???
+
+ private class RemoteRoundStrategy(context:ActorContext, myMove: Move, nextURI: URI) extends Strategy {
+  val currentMove = myMove
+  def next(m: Move) = {
+    // call URI
+    val (nextMove, laterURI) = parseResponse("bananas")
+    new RemoteRoundStrategy(context, nextMove, laterURI)
+  }
+ }
+
 }
 
 object Strategy {
