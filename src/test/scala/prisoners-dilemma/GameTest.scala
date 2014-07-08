@@ -6,9 +6,10 @@ import scala.concurrent.duration._
 object GameGen {
   import Gen._
   import StrategyGen._
+  import MyLittleGennies._
 
   val playerGen =  for {
-    name <- Gen.alphaStr
+    name <- pronounceableStr
     strategy <- strategyGen
   } yield Player(name, strategy)
 
