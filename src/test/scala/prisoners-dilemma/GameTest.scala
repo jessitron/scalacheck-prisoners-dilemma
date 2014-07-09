@@ -10,7 +10,7 @@ object GameGen {
 
   val playerGen =  for {
     name <- pronounceableStr
-    strategy <- strategyGen
+    strategy <- strategizerGen
   } yield Player(name, strategy)
 
   implicit val arbPlayer = Arbitrary(playerGen)
@@ -53,13 +53,15 @@ object BigGameTest extends Properties("A free-for-all") {
    classify(players.size < 10, "small", "large") {
 
     val timer = new Timer()
-    val output = Game.eachOnEach(rules)(actorSystem, players, timeLimit)
+    val EachOnEachOutcome(output, actorRef) = Game.eachOnEach(rules)(actorSystem, players, timeLimit)
+
     val timeTaken = timer.check
     val timeOver = timeTaken - timeLimit
 
     classify (timeOver < (fudge/2), "comfortable", "barely") {
      (timeTaken <= (timeLimit + fudge)) :| s"$timeTaken was longer than $timeLimit" &&
-     eachPlayerGetsAResult(players, output)
+     eachPlayerGetsAResult(players, output) &&
+     actorRef.isTerminated :| "Actor shut down"
     }
    }
   }

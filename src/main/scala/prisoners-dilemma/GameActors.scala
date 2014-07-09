@@ -15,7 +15,7 @@ import FreeForAll._
 
 class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extends Actor {
 
-  val rounds: Stream[ScoreSet] = Strategy.moves(matchup._1.strategy, matchup._2.strategy) map (Rules.score(rules,_))
+  val rounds: Stream[ScoreSet] = RoundStrategy.moves(matchup._1.strategy.newGame(), matchup._2.strategy.newGame()) map (Rules.score(rules,_))
 
   override def preStart() {
     self ! rounds

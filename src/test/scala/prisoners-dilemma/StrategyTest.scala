@@ -6,7 +6,6 @@ object StrategyGen {
   import Gen._
 
   def streamOfN[T](n: Int, g: Gen[T]): Gen[Stream[T]] = Gen.containerOfN[Stream, T](n, g)
-  //val randomStrategy: Gen[Strategy] =
 
   def infiniteStream[T](g: Gen[T]) = const("poo") map {
     (_) => {
@@ -17,9 +16,11 @@ object StrategyGen {
     }
   }
 
-  val strategyGen:Gen[Strategy] = infiniteStream(RuleGenerators.move) map (Strategy.fromStream(_)) map (Strategy.recording(_))
+  val strategyGen:Gen[RoundStrategy] = infiniteStream(RuleGenerators.move) map (RoundStrategy.fromStream(_)) map (RoundStrategy.recording(_))
 
-  implicit val arbStrategy = Arbitrary(strategyGen)
+  val strategizerGen: Gen[Strategizer] = strategyGen.map(Strategizer.thatDoes(_))
+
+  implicit val arbStrategy = Arbitrary(strategizerGen)
 
 }
 
@@ -33,16 +34,16 @@ object StrategyProperties extends Properties("Various known strategies") {
     val moveStreamGenerator = streamOfN(turns, RuleGenerators.move)
     forAll(moveStreamGenerator, moveStreamGenerator) {
       (stream1: Stream[Move], stream2: Stream[Move]) =>
-        val s1 = Strategy.fromStream(stream1)
-        val s2 = Strategy.fromStream(stream2)
-        Strategy.moves(s1, s2).take(turns).toSeq =? stream1.zip(stream2).take(turns)
+        val s1 = RoundStrategy.fromStream(stream1)
+        val s2 = RoundStrategy.fromStream(stream2)
+        RoundStrategy.moves(s1, s2).take(turns).toSeq =? stream1.zip(stream2).take(turns)
     }
   }
 
   property("The sucker always cooperates") =
     forAll(strategyGen, Gen.posNum[Int]) {
-      (opponent: Strategy, turns: Int) =>
-        val allMoves:Stream[MoveSet] = Strategy.moves(Strategy.sucker, opponent).take(turns)
+      (opponent: RoundStrategy, turns: Int) =>
+        val allMoves:Stream[MoveSet] = RoundStrategy.moves(RoundStrategy.sucker, opponent).take(turns)
         val myMoves = allMoves.map (_._1)
 
         myMoves.forall(_ == Cooperate) :|
@@ -51,8 +52,8 @@ object StrategyProperties extends Properties("Various known strategies") {
 
   property("Tit for Tat copies the prior move, and starts with Cooperate") =
     forAll(strategyGen, Gen.posNum[Int]) {
-      (opponent:Strategy, turns: Int) =>
-      val allMoves = Strategy.moves(Strategy.titForTat, opponent).take(turns)
+      (opponent:RoundStrategy, turns: Int) =>
+      val allMoves = RoundStrategy.moves(RoundStrategy.titForTat, opponent).take(turns)
       val myFirstMove = allMoves.head._1
       val myMovesExceptTheFirst = allMoves.map(_._1).tail
       val theirMovesExceptTheLast = allMoves.map(_._2).take(turns - 1)

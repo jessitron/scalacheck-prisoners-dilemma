@@ -23,16 +23,19 @@ object Rules {
     }
 }
 
-case class Player(name: String, strategy: Strategy)
+case class Player(name: String, strategy: Strategizer)
 
 case class Outcome(player: Player, opponent: Player, score: Points, myMoves: Seq[Move], opponentMoves:Seq[Move])
 
 case class AggregateOutcome(player: Player, score: Points)
 
+case class EachOnEachOutcome(scores: Seq[AggregateOutcome], actorUsed: ActorRef)
+
 object Game {
 
   def oneOnOne(rules:Rules, turns: Int)(p1: Player, p2:Player): (Outcome, Outcome) = {
-    val moves = Strategy.moves(p1.strategy, p2.strategy).take(turns)
+    val moves = RoundStrategy.moves(p1.strategy.newGame(),
+                                    p2.strategy.newGame()).take(turns)
     val scores = moves map (Rules.score(rules,_))
 
     val p1score = scores.map(_._1).sum
@@ -48,7 +51,7 @@ object Game {
   import scala.concurrent._
   import FreeForAll._
   def eachOnEach(rules: Rules)(system: ActorSystem,
-    players: Seq[Player], timeLimit: FiniteDuration): Seq[AggregateOutcome] = {
+    players: Seq[Player], timeLimit: FiniteDuration): EachOnEachOutcome = {
       val game = system.actorOf(Props(new EachOnEach(players, rules)))
       Thread.sleep(timeLimit.toMillis); // should be some less? Also shouldn't hold a thread
       import akka.pattern.ask
@@ -59,8 +62,9 @@ object Game {
 
       // I should use monoids but I don't feel like bringing in scalaz
       // this is TERRIBLE functional style
-      results.flatMap { case ((p1,p2),(s1, s2)) => Seq((p1,s1),(p2,s2)) }.
-      groupBy(_._1).map { case (p, pandscores) => (p, pandscores.map(_._2).sum)}.
-      map { case (p, score) => AggregateOutcome(p, score)}.toSeq
+      val scores = results.flatMap { case ((p1,p2),(s1, s2)) => Seq((p1,s1),(p2,s2)) }.
+        groupBy(_._1).map { case (p, pandscores) => (p, pandscores.map(_._2).sum)}.
+        map { case (p, score) => AggregateOutcome(p, score)}.toSeq
+      EachOnEachOutcome(scores, game)
   }
 }
