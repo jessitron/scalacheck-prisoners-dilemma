@@ -3,7 +3,7 @@ package prisoners_dilemma
 import akka.actor._
 
 object FreeForAll {
-  type Matchup = (Player, Player)
+  case class Matchup(p1:Player, p2:Player)
   type AllTheScores = Map[Matchup, ScoreSet]
   case object GiveMeTheScore
 
@@ -15,7 +15,7 @@ import FreeForAll._
 
 class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extends Actor {
 
-  val rounds: Stream[ScoreSet] = RoundStrategy.moves(matchup._1.strategy.newGame(), matchup._2.strategy.newGame()) map (Rules.score(rules,_))
+  val rounds: Stream[ScoreSet] = RoundStrategy.moves(matchup.p1.strategy.newGame(), matchup.p2.strategy.newGame()) map (Rules.score(rules,_))
 
   override def preStart() {
     self ! rounds
@@ -28,7 +28,7 @@ class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extend
 
   def receive = {
     case ((score:ScoreSet) #:: moreRounds) =>
-      scoreRound(score);
+      scoreRound(score)
       scorekeeper ! UpdatedScore(matchup, scoresSoFar)
       self ! moreRounds
   }
@@ -39,7 +39,7 @@ class EachOnEach(players: Seq[Player], rules: Rules) extends Actor {
 
   override def preStart() {
     val matchupSeqs = players.sliding(2,1).toList :+ List(players.head, players.last)
-    val matchups :Seq[Matchup]= matchupSeqs.map( s => (s(0), s(1)))
+    val matchups :Seq[Matchup]= matchupSeqs.map( s => Matchup(s(0), s(1)))
 
     matchups.foreach { m =>
       context.actorOf(Props(classOf[MatchupActor], m, rules, self))

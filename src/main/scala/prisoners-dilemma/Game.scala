@@ -62,7 +62,7 @@ object Game {
 
       // I should use monoids but I don't feel like bringing in scalaz
       // this is TERRIBLE functional style
-      val scores = results.flatMap { case ((p1,p2),(s1, s2)) => Seq((p1,s1),(p2,s2)) }.
+      val  scores = results.flatMap { case (m,(s1, s2)) => Seq((m.p1,s1),(m.p2,s2)) }.
         groupBy(_._1).map { case (p, pandscores) => (p, pandscores.map(_._2).sum)}.
         map { case (p, score) => AggregateOutcome(p, score)}.toSeq
       EachOnEachOutcome(scores, game)
