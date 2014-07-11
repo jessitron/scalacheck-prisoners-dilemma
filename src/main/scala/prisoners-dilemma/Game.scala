@@ -57,14 +57,9 @@ object Game {
       import akka.pattern.ask
       val akkaTimeout = akka.util.Timeout(timeLimit)
       val results = Await.result(
-        game.ask(GiveMeTheScore)(akkaTimeout).mapTo[AllTheScores], timeLimit)
+        game.ask(GiveMeTheScore)(akkaTimeout).mapTo[Seq[AggregateOutcome]], timeLimit)
       game ! PoisonPill
 
-      // I should use monoids but I don't feel like bringing in scalaz
-      // this is TERRIBLE functional style
-      val  scores = results.flatMap { case (m,(s1, s2)) => Seq((m.p1,s1),(m.p2,s2)) }.
-        groupBy(_._1).map { case (p, pandscores) => (p, pandscores.map(_._2).sum)}.
-        map { case (p, score) => AggregateOutcome(p, score)}.toSeq
-      EachOnEachOutcome(scores, game)
+      EachOnEachOutcome(results, game)
   }
 }

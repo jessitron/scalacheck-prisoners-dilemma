@@ -3,7 +3,10 @@ package prisoners_dilemma
 import akka.actor._
 
 object FreeForAll {
-  case class Matchup(p1:Player, p2:Player)
+  case class Matchup(p1:Player, p2:Player){
+    def toSeq = Seq(p1,p2)
+  }
+
   type AllTheScores = Map[Matchup, ScoreSet]
   case object GiveMeTheScore
 
@@ -46,10 +49,15 @@ class EachOnEach(players: Seq[Player], rules: Rules) extends Actor {
     }
   }
 
+   def toScoreSequence(m : Matchup,s :ScoreSet):Seq[(Player,Points)] = Seq((m.p1,s._1),(m.p2,s._2))
+
+   def flatScores :Iterable[(Player,Points)] = scores.map(x=>toScoreSequence(x._1,x._2)).flatten
+   def scoreByPlayer:Seq[AggregateOutcome] = flatScores.groupBy(_._1).seq.map{case (p,xs)=>AggregateOutcome(p,xs.map(_._2).sum)}.toSeq
+
    var scores: AllTheScores = Map[Matchup, ScoreSet]()
 
    def receive = {
-     case GiveMeTheScore => sender ! scores
+     case GiveMeTheScore => sender ! scoreByPlayer
      case UpdatedScore(m: Matchup, s: ScoreSet) => scores = scores + (m -> s)
      case x => println(s"What is $x?")
    }
