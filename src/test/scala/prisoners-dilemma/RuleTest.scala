@@ -1,6 +1,7 @@
 package prisoners_dilemma
 
 import org.scalacheck._
+import Package._
 
 object RuleGenerators {
 
@@ -17,8 +18,6 @@ object RuleGenerators {
 
   implicit val arbRules: Arbitrary[Rules] = Arbitrary(ruleGen(Int.MaxValue / 2))
 
-  val move: Gen[Move] = Gen.oneOf(Cooperate, Defect)
-  implicit val arbMoves: Arbitrary[Move] = Arbitrary(move)
 
 }
 

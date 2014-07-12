@@ -9,4 +9,6 @@ package object prisoners_dilemma {
 
   type MoveSet = (Move, Move)
   type ScoreSet = (Points, Points)
+
+  type Name = String
 }

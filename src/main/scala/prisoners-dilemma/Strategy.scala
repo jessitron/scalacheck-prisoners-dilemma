@@ -31,12 +31,6 @@ object RoundStrategy {
     }
   }
 
-  val sucker: RoundStrategy = new RoundStrategy {
-     val currentMove = Cooperate
-     def next(x: Move) = this
-
-     override def toString = "Sucker!!"
-  }
 
   def chooseBasedOnTheirMove(myMove: Move, choice: Move => Move):RoundStrategy =
     new RoundStrategy {

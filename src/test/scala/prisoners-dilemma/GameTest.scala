@@ -24,6 +24,7 @@ object GameGen {
     n <- Gen.choose(3, 20)
     list <- listOfN(n, playerGen)
   } yield list
+
 }
 
 object BigGameTest extends Properties("A free-for-all") {
@@ -31,6 +32,7 @@ object BigGameTest extends Properties("A free-for-all") {
   import GameGen._
   import RuleGenerators._
   import akka.actor._
+  import PropForEach.forEach
 
   val fudge = 300.millis
 
@@ -39,6 +41,29 @@ object BigGameTest extends Properties("A free-for-all") {
         log-dead-letters = 0
       }
       """)
+
+  property("suckers never win") = forAll(
+    TestPlayer.someStandardPlayers,
+    ruleGen(100),
+    reasonableTimeLimit) {
+    (birds: Seq[TestPlayer], rules: Rules, timeLimit: FiniteDuration) =>
+
+    val result = Game.eachOnEach(rules)(actorSystem, birds.map(_.player), timeLimit)
+    val output = result.scores
+
+    val suckers = birds.filter(_.alwaysCooperates)
+
+    def score(p: TestPlayer) = {
+      output.find(ao => ao.player == p.player).get.score
+    }
+
+    val maxScore = output.map(_.score).max
+
+    forEach[TestPlayer](suckers,
+      s => score(s) <= maxScore,
+      s => s"Sucker $s won with ${score(s)} points")
+  }
+
 
   // I should do this in ScalaTest so that I can shut this down
   val actorSystem = ActorSystem("big-game-test", customConf)

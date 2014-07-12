@@ -16,7 +16,7 @@ object StrategyGen {
     }
   }
 
-  val strategyGen:Gen[RoundStrategy] = infiniteStream(RuleGenerators.move) map (RoundStrategy.fromStream(_)) map (RoundStrategy.recording(_))
+  val strategyGen:Gen[RoundStrategy] = infiniteStream(Package.move) map (RoundStrategy.fromStream(_)) map (RoundStrategy.recording(_))
 
   val strategizerGen: Gen[Strategizer] = strategyGen.map(Strategizer.thatDoes(_))
 
@@ -31,7 +31,7 @@ object StrategyProperties extends Properties("Various known strategies") {
 
   property("Two random streams of moves are played out") = forAll(Gen.posNum[Int])
   { (turns: Int) =>
-    val moveStreamGenerator = streamOfN(turns, RuleGenerators.move)
+    val moveStreamGenerator = streamOfN(turns, Package.move)
     forAll(moveStreamGenerator, moveStreamGenerator) {
       (stream1: Stream[Move], stream2: Stream[Move]) =>
         val s1 = RoundStrategy.fromStream(stream1)
@@ -43,7 +43,7 @@ object StrategyProperties extends Properties("Various known strategies") {
   property("The sucker always cooperates") =
     forAll(strategyGen, Gen.posNum[Int]) {
       (opponent: RoundStrategy, turns: Int) =>
-        val allMoves:Stream[MoveSet] = RoundStrategy.moves(RoundStrategy.sucker, opponent).take(turns)
+        val allMoves:Stream[MoveSet] = RoundStrategy.moves(birds.StandardBirds.SUCKER, opponent).take(turns)
         val myMoves = allMoves.map (_._1)
 
         myMoves.forall(_ == Cooperate) :|
