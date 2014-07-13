@@ -6,24 +6,21 @@ object NameGenerator {
   val VOWELS = Seq('A','E','I','O','U')
   def isVowel(c:Char) = VOWELS.contains(c.toUpper)
 
-  def fixQ(c: Char) = c match {
-    case 'Q' | 'q' => c + "u"
-    case other => other.toString
-  }
+  val CONSONANTS = ('B' to 'Z').filterNot(isVowel).filterNot(_ == 'Q')
 
-  val consonant: Gen[String] =
-    Gen.oneOf('b' to 'z').suchThat(!isVowel(_)).map(fixQ)
-  val vowel: Gen[String] =
-    Gen.oneOf(VOWELS).map(_.toLower).map(_.toString)
+  val consonant: Gen[Char] =
+    Gen.oneOf(CONSONANTS)
+  val vowel: Gen[Char] =
+    Gen.oneOf(VOWELS)
 
   val syllable = for {
     c1 <- consonant
     v  <- vowel
-    c2 <- consonant.suchThat(! _.startsWith("q"))
-  } yield c1 + v + c2
+    c2 <- consonant
+  } yield c1.toString + v + c2
 
   val pronounceableStr = for {
     n <- Gen.choose(1,4)
     parts <- Gen.listOfN(n, syllable)
-  } yield parts.mkString("").capitalize
+  } yield parts.mkString("").toLowerCase.capitalize
 }
