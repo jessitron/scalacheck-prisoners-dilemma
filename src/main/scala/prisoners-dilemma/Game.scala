@@ -39,9 +39,13 @@ object Game {
       Thread.sleep(timeLimit.toMillis); // should be some less? Also shouldn't hold a thread
       import akka.pattern.ask
       val akkaTimeout = akka.util.Timeout(timeLimit)
-      val results: Either[GameFail, AllTheScores] = Await.result(
+      val results: Either[GameFail, AllTheScores] = try {
+        Await.result(
         exceptionsToEither(game.ask(GiveMeTheScore)(akkaTimeout).mapTo[AllTheScores])
-      , timeLimit)
+      , timeLimit) }
+        catch {
+          case te: TimeoutException => Left(te.getMessage)
+        }
       game ! PoisonPill
 
       // I should use monoids but I don't feel like bringing in scalaz
