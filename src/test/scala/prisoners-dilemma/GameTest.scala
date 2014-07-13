@@ -46,29 +46,29 @@ object BigGameTest2 extends Properties("A free-for-all") {
     TestPlayer.someStandardPlayers,
     ruleGen(100),
     reasonableTimeLimit) {
-    (birds: Seq[TestPlayer], rules: Rules, timeLimit: FiniteDuration) =>
+      (birds: Seq[TestPlayer], rules: Rules, timeLimit: FiniteDuration) =>
 
+      (birds.length >= 3) ==> { // Don't shrink too far
+        println("Checking that suckers never win.")
+        val suckers = birds.filter(_.alwaysCooperates)
+        (suckers.nonEmpty) ==> {
+          println("There are " + suckers.length + " suckers")
 
-    println("Checking that suckers never win.")
-    val suckers = birds.filter(_.alwaysCooperates)
-    (suckers.nonEmpty) ==> {
-      println("There are " + suckers.length + " suckers")
+          val result = Game.eachOnEach(rules)(actorSystem, birds.map(_.player), timeLimit)
+          val output = result.scores
 
-    val result = Game.eachOnEach(rules)(actorSystem, birds.map(_.player), timeLimit)
-    val output = result.scores
+          def score(p: TestPlayer) = {
+            output.find(ao => ao.player == p.player).get.score
+          }
 
+          val maxScore = output.map(_.score).max
 
-    def score(p: TestPlayer) = {
-      output.find(ao => ao.player == p.player).get.score
-    }
-
-    val maxScore = output.map(_.score).max
-
-    forEach[TestPlayer](suckers,
-      s => score(s) >= maxScore, // THIS SHOULD FAIL
-      s => s"Sucker $s won with ${score(s)} points")
-  }
-    }
+          forEach[TestPlayer](suckers,
+            s => score(s) >= maxScore, // THIS SHOULD FAIL
+            s => s"Sucker $s won with ${score(s)} points")
+        }
+     }
+   }
 
 
   // I should do this in ScalaTest so that I can shut this down
