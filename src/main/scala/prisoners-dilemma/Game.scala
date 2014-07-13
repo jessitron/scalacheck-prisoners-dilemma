@@ -39,15 +39,29 @@ object Game {
       Thread.sleep(timeLimit.toMillis); // should be some less? Also shouldn't hold a thread
       import akka.pattern.ask
       val akkaTimeout = akka.util.Timeout(timeLimit)
-      val results = Await.result(
-        game.ask(GiveMeTheScore)(akkaTimeout).mapTo[AllTheScores], timeLimit)
+      val results: Either[GameFail, AllTheScores] = Await.result(
+        exceptionsToEither(game.ask(GiveMeTheScore)(akkaTimeout).mapTo[AllTheScores])
+      , timeLimit)
       game ! PoisonPill
 
       // I should use monoids but I don't feel like bringing in scalaz
       // this is TERRIBLE functional style
-      val scores = results.flatMap { case ((p1,p2),(s1, s2)) => Seq((p1,s1),(p2,s2)) }.
+
+      results.right.map(ss => EachOnEachOutcome(scoreByPlayer(ss), game))
+  }
+
+  private def scoreByPlayer(results: AllTheScores): Seq[AggregateOutcome] = {
+    // I should use monoids but I don't feel like bringing in scalaz
+      // this is TERRIBLE functional style
+     results.flatMap { case ((p1,p2),(s1, s2)) => Seq((p1,s1),(p2,s2)) }.
         groupBy(_._1).map { case (p, pandscores) => (p, pandscores.map(_._2).sum)}.
         map { case (p, score) => AggregateOutcome(p, score)}.toSeq
-      Right(EachOnEachOutcome(scores, game))
+  }
+
+  private def exceptionsToEither[T](f: Future[T]): Future[Either[GameFail,T]] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    f.transform( happy => Right(happy), t => t).recover(
+      { case e: Exception => Left(e.getMessage)}
+    )
   }
 }
