@@ -55,17 +55,26 @@ object BigGameTest2 extends Properties("A free-for-all") {
           println("There are " + suckers.length + " suckers")
 
           val result = Game.eachOnEach(rules)(actorSystem, birds.map(_.player), timeLimit)
-          val output = result.scores
+          classify(result.isLeft, "sad", "happy") {
+          result match {
+            case Right(happy) => {
+               val output = happy.scores
 
-          def score(p: TestPlayer) = {
-            output.find(ao => ao.player == p.player).get.score
+              def score(p: TestPlayer) = {
+               output.find(ao => ao.player == p.player).get.score
+              }
+              val maxScore = output.map(_.score).max
+
+              forEach[TestPlayer](suckers,
+               s => score(s) >= maxScore, // THIS SHOULD FAIL
+               s => s"Sucker $s won with ${score(s)} points")
+            }
+            case Left(sad) =>
+              // dang, too slow or something
+              Prop.undecided
           }
+         }
 
-          val maxScore = output.map(_.score).max
-
-          forEach[TestPlayer](suckers,
-            s => score(s) >= maxScore, // THIS SHOULD FAIL
-            s => s"Sucker $s won with ${score(s)} points")
         }
      }
    }
@@ -103,15 +112,20 @@ object BigGameTest extends Properties("A free-for-all") {
    classify(players.size < 10, "small", "large") {
 
     val timer = new Timer()
-    val EachOnEachOutcome(output, actorRef) = Game.eachOnEach(rules)(actorSystem, players, timeLimit)
+    val output = Game.eachOnEach(rules)(actorSystem, players, timeLimit)
 
     val timeTaken = timer.check
     val timeOver = timeTaken - timeLimit
 
     classify (timeOver < (fudge/2), "comfortable", "barely") {
-     (timeTaken <= (timeLimit + fudge)) :| s"$timeTaken was longer than $timeLimit" &&
-     eachPlayerGetsAResult(players, output) &&
-     actorRef.isTerminated :| "Actor shut down"
+       (timeTaken <= (timeLimit + fudge)) :| s"$timeTaken was longer than $timeLimit" &&
+       (output match {
+         case Right(EachOnEachOutcome(output, actorRef)) =>
+          actorRef.isTerminated :| "Actor shut down" &&
+          eachPlayerGetsAResult(players, output)
+         case Left(_) =>
+          Prop.passed
+       })
     }
    }
   }
