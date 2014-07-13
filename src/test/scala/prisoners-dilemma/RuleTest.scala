@@ -21,14 +21,14 @@ object RuleGenerators {
 
 }
 
-object RuleTest extends Properties("Prisoners Dilemma") {
+object RuleTest extends Properties("Prisoner's Dilemma") {
   import Prop._
   import Gen._
   import RuleGenerators._
   property("Defection is always better for me") =
      forAll {(rules: Rules, theirMove: Move) =>
-       val ifIDefect = Rules.score(rules, (Defect, theirMove))._1
-       val ifICooperate = Rules.score(rules, (Cooperate, theirMove))._1
+       val (ifIDefect, _) = Rules.score(rules, (Defect, theirMove))
+       val (ifICooperate, _) = Rules.score(rules, (Cooperate, theirMove))
 
        ifIDefect > ifICooperate
      }
@@ -43,7 +43,8 @@ object RuleTest extends Properties("Prisoners Dilemma") {
   def cooperationIsBetter(rules:Rules, moves: MoveSet): Prop = {
     val bestResult = Rules.score(rules, (Cooperate, Cooperate))
     val myResult = Rules.score(rules, moves)
-    (total(bestResult) > total(myResult)) :| s"Cooperating got $bestResult while $moves got $myResult"
+    (total(bestResult) > total(myResult)) :|
+         s"Cooperating got $bestResult while $moves got $myResult"
   }
 
   def total(scores: ScoreSet) = scores._1 + scores._2

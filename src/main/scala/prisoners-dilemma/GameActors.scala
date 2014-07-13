@@ -15,7 +15,11 @@ import FreeForAll._
 
 class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extends Actor {
 
-  val rounds: Stream[ScoreSet] = RoundStrategy.moves(matchup._1.strategy.newGame(), matchup._2.strategy.newGame()) map (Rules.score(rules,_))
+  val (oneBird, twoBird) = matchup
+
+  val rounds: Stream[ScoreSet] =
+    RoundStrategy.moves(oneBird.strategy.newGame(), twoBird.strategy.newGame()).
+      map(Rules.score(rules,_))
 
   override def preStart() {
     self ! rounds
@@ -23,7 +27,12 @@ class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extend
 
   var scoresSoFar = (0,0)
   def scoreRound(scoreSet: ScoreSet) {
-    scoresSoFar = (scoresSoFar._1 + scoreSet._1, scoresSoFar._2 + scoreSet._2)
+    scoresSoFar = add(scoresSoFar, scoreSet)
+  }
+  def add(scores: ScoreSet, moreScores: ScoreSet) = {
+    val (a1, a2) = scores
+    val (b1, b2) = moreScores
+    (a1 + b1, a2 + b2)
   }
 
   def receive = {

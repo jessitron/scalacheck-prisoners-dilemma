@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 object GameGen {
   import Gen._
   import StrategyGen._
-  import MyLittleGennies._
+  import NameGenerator._
 
   val playerGen =  for {
     name <- pronounceableStr

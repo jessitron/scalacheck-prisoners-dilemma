@@ -50,6 +50,7 @@ object StrategyProperties extends Properties("Various known strategies") {
            s"The sucker defected OMG!! Here's the story: ${allMoves.toList}"
   }
 
+  // TODO: Move titForTat over to birds package, and move both these tests too
   property("Tit for Tat copies the prior move, and starts with Cooperate") =
     forAll(strategyGen, Gen.posNum[Int]) {
       (opponent:RoundStrategy, turns: Int) =>

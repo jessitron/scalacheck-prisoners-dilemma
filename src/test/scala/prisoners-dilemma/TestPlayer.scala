@@ -53,7 +53,7 @@ case class ConsistentTestPlayer(
 
 
 object TestPlayer {
-  val nameGen = MyLittleGennies.pronounceableStr
+  val nameGen = NameGenerator.pronounceableStr
   val constantMovePlayer: Gen[TestPlayer] =
     for {
       name <- nameGen
