@@ -109,6 +109,7 @@ object BigGameTest extends Properties("A free-for-all") {
  property("All games end within the time limit") =
   forAll(ruleGen(20) :| "Rules", somePlayers :| "Players", reasonableTimeLimit) {
   (rules: Rules, players: Seq[Player], timeLimit: FiniteDuration) =>
+      (players.length >= 3) ==> { // Don't shrink too far
    classify(players.size < 10, "small", "large") {
 
     val timer = new Timer()
@@ -127,6 +128,7 @@ object BigGameTest extends Properties("A free-for-all") {
           Prop.passed
        })
     }
+   }
    }
   }
 
