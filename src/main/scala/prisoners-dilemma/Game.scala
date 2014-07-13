@@ -42,7 +42,7 @@ object Game {
       val results: Either[GameFail, AllTheScores] = try {
         Await.result(
         exceptionsToEither(game.ask(GiveMeTheScore)(akkaTimeout).mapTo[AllTheScores])
-      , timeLimit) }
+      , timeLimit + 100.millis) }
         catch {
           case te: TimeoutException => Left(te.getMessage)
         }
