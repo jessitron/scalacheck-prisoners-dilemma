@@ -14,6 +14,8 @@ case class EachOnEachOutcome(scores: Seq[AggregateOutcome], actorUsed: ActorRef)
 
 object Game {
 
+  val gracePeriod = 100.millis
+
   def oneOnOne(rules:Rules, turns: Int)(p1: Player, p2:Player): (Outcome, Outcome) = {
     val moves = RoundStrategy.moves(p1.strategy.newGame(),
                                     p2.strategy.newGame()).take(turns)
@@ -42,7 +44,7 @@ object Game {
       val results: Either[GameFail, AllTheScores] = try {
         Await.result(
         exceptionsToEither(game.ask(GiveMeTheScore)(akkaTimeout).mapTo[AllTheScores])
-      , timeLimit + 100.millis) }
+      , timeLimit + gracePeriod) }
         catch {
           case te: TimeoutException => Left(te.getMessage)
         }
@@ -57,9 +59,9 @@ object Game {
   private def scoreByPlayer(results: AllTheScores): Seq[AggregateOutcome] = {
     // I should use monoids but I don't feel like bringing in scalaz
       // this is TERRIBLE functional style
-     results.flatMap { case ((p1,p2),(s1, s2)) => Seq((p1,s1),(p2,s2)) }.
-        groupBy(_._1).map { case (p, pandscores) => (p, pandscores.map(_._2).sum)}.
-        map { case (p, score) => AggregateOutcome(p, score)}.toSeq
+    val byPlayer =  results.flatMap { case ((p1,p2),(s1, s2)) => Seq((p1,s1),(p2,s2))}
+    byPlayer.groupBy(_._1).map { case (p, pandscores) =>
+      AggregateOutcome(p, pandscores.map(_._2).sum)}.toSeq
   }
 
   private def exceptionsToEither[T](f: Future[T]): Future[Either[GameFail,T]] = {

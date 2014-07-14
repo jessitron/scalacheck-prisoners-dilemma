@@ -52,7 +52,7 @@ object BigGameTest2 extends Properties("A free-for-all") {
         println("Checking that suckers never win.")
         val suckers = birds.filter(_.alwaysCooperates)
         (suckers.nonEmpty) ==> {
-          println("There are " + suckers.length + " suckers")
+          println(s"There are ${suckers.length} suckers  ${birds.length} competitors time limit: $timeLimit")
 
           val result = Game.eachOnEach(rules)(actorSystem, birds.map(_.player), timeLimit)
           classify(result.isLeft, "sad", "happy") {
