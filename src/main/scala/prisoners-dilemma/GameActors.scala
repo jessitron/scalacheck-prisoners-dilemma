@@ -14,7 +14,7 @@ object FreeForAll {
 
 import FreeForAll._
 
-class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extends Actor {
+class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef, scoreKeeperUpdateSize:Int) extends Actor {
 
   val (oneBird, twoBird) = matchup
 
@@ -27,7 +27,9 @@ class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extend
   }
 
   var scoresSoFar = (0,0)
+  var roundNum = 0
   def scoreRound(scoreSet: ScoreSet) {
+    roundNum = roundNum+1
     scoresSoFar = add(scoresSoFar, scoreSet)
   }
   def add(scores: ScoreSet, moreScores: ScoreSet) = {
@@ -38,7 +40,8 @@ class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extend
 
   def receive = {
     case ((score:ScoreSet) #:: moreRounds) =>
-      scoreRound(score);
+      scoreRound(score)
+      if(roundNum % scoreKeeperUpdateSize ==0)
       scorekeeper ! UpdatedScore(matchup, scoresSoFar)
       self ! moreRounds
   }
@@ -52,7 +55,7 @@ class EachOnEach(players: Seq[Player], rules: Rules) extends Actor {
     val matchups :Seq[Matchup]= matchupSeqs.map( s => (s(0), s(1)))
 
     matchups.foreach { m =>
-      context.actorOf(Props(classOf[MatchupActor], m, rules, self))
+      context.actorOf(Props(classOf[MatchupActor], m, rules, self,100))
     }
   }
 
