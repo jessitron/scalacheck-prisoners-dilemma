@@ -70,6 +70,7 @@ object BigGameTest2 extends Properties("A free-for-all") {
                s => s"Sucker $s won with ${score(s)} points")
             }
             case Left(sad) =>
+              println(sad)
               // dang, too slow or something
               Prop.undecided
           }

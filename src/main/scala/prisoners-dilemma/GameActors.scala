@@ -1,6 +1,7 @@
 package prisoners_dilemma
 
 import akka.actor._
+import akka.event.LoggingReceive
 
 object FreeForAll {
   type Matchup = (Player, Player)
@@ -57,9 +58,10 @@ class EachOnEach(players: Seq[Player], rules: Rules) extends Actor {
 
    var scores: AllTheScores = Map[Matchup, ScoreSet]()
 
-   def receive = {
-     case GiveMeTheScore => sender ! scores
-     case UpdatedScore(m: Matchup, s: ScoreSet) => scores = scores + (m -> s)
+   var count = 0
+   def receive = LoggingReceive {
+     case GiveMeTheScore => sender ! scores; println("scores req")
+     case UpdatedScore(m: Matchup, s: ScoreSet) => scores = scores + (m -> s); count = count+1; if(count%5000 ==0) println(rules+" "+count)
      case x => println(s"What is $x?")
    }
 }
