@@ -43,10 +43,10 @@ object BigGameTest2 extends Properties("A free-for-all") {
       """)
 
   property("suckers never win") = forAll(
-    TestPlayer.someStandardPlayers,
+    SlowTestPlayer.someSlowPlayers,
     ruleGen(100),
     reasonableTimeLimit) {
-      (birds: Seq[TestPlayer], rules: Rules, timeLimit: FiniteDuration) =>
+      (birds: Seq[SlowTestPlayer], rules: Rules, timeLimit: FiniteDuration) =>
 
       (birds.length >= 3) ==> { // Don't shrink too far
         println("Checking that suckers never win.")
@@ -108,10 +108,12 @@ object BigGameTest extends Properties("A free-for-all") {
     Prop.all(players.map(p => results.exists(_.player == p) :| "No results for $p"):_*)
 
  property("All games end within the time limit") =
-  forAll(ruleGen(20) :| "Rules", somePlayers :| "Players", reasonableTimeLimit) {
-  (rules: Rules, players: Seq[Player], timeLimit: FiniteDuration) =>
-      (players.length >= 3) ==> { // Don't shrink too far
-   classify(players.size < 10, "small", "large") {
+  forAll(ruleGen(20) :| "Rules", SlowTestPlayer.someSlowPlayers :| "Players", reasonableTimeLimit) {
+  (rules: Rules, testPlayers: Seq[SlowTestPlayer], timeLimit: FiniteDuration) =>
+      (testPlayers.length >= 3) ==> { // Don't shrink too far
+   classify(testPlayers.size < 10, "small", "large") {
+
+     val players = testPlayers.map(_.player)
 
     val timer = new Timer()
     val output = Game.eachOnEach(rules)(actorSystem, players, timeLimit)

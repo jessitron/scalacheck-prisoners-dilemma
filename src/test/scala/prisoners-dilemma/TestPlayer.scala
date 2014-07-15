@@ -24,11 +24,14 @@ case object MakeAMove extends Instructions
 case object Failinate extends Instructions
 case class Wait(d: Duration) extends Instructions
 
-case class SlowStrategy(inner: RoundStrategy, instructions: Stream[Instructions]) extends RoundStrategy
+case class SlowStrategy(inner: RoundStrategy,
+  instructions: Stream[Instructions],
+  alwaysWaitTime: FiniteDuration) extends RoundStrategy
 {
   private val doThese = instructions.iterator
    val currentMove = inner.currentMove
    def next(m: Move) = {
+     Thread.sleep(alwaysWaitTime.toMillis)
      doThese.next() match {
        case MakeAMove => inner.next(m)
        case Failinate => throw new Exception("bird poop")
@@ -39,7 +42,8 @@ case class SlowStrategy(inner: RoundStrategy, instructions: Stream[Instructions]
 
 case class SlowTestPlayer(wrapped: TestPlayer,
   newPlayerInstructions: Seq[Instructions],
-  birdInstructions: Seq[Seq[Instructions]]) extends TestPlayer {
+  birdInstructions: Seq[Seq[Instructions]],
+  alwaysWaitTime: FiniteDuration) extends TestPlayer {
   def name: Name = wrapped.name
   def strategy = ???
   def alwaysCooperates = wrapped.alwaysCooperates
@@ -55,22 +59,46 @@ case class SlowTestPlayer(wrapped: TestPlayer,
   // I'm being strange here to make this thread-safe. Have a better idea?
   var birdIter: Iterator[() => SlowStrategy] = null
 
-  def initThisManyBirds(numBirds:Int) = {
+  def initSomeBirds(numBirds:Int) = {
     // TODO: use instructions to make this sometimes slow
     val birdInstructionStream = Stream.continually(birdInstructions.toStream).flatten
     val requestedBirds = for {
       i <- 1 to numBirds
       instrs <- birdInstructionStream
     } yield {
-      val p = SlowStrategy(wrapped.strategy, Stream.continually(instrs.toStream).flatten)
+      val p = SlowStrategy(wrapped.strategy, Stream.continually(instrs.toStream).flatten, alwaysWaitTime)
       () => p
     }
     birdIter = requestedBirds.iterator
 
   }
+}
 
+object SlowTestPlayer {
+  import Gen._
+  import scala.concurrent.duration._
 
+  val waitTime: Gen[Wait] = choose(10,500).map(_.millis).map(Wait(_))
+  val oneInstruction: Gen[Instructions] = oneOf(const(MakeAMove), const(Failinate), waitTime)
+  val someInstructions: Gen[Seq[Instructions]] = Package.someOf(choose(1, 100), oneInstruction)
+  val multipleBirdInstructions = Package.someOf(choose(1,20), someInstructions)
+  val timeToWaitEveryMove: Gen[FiniteDuration] = Gen.choose(1, 100).map(_.millis)
 
+  private val slowPlayer: Gen[SlowTestPlayer] = for {
+    player <- TestPlayer.someStandardPlayer
+    newPlayerInstructions <- someInstructions
+    birdInstructions <- multipleBirdInstructions
+    alwaysWaitTime <- timeToWaitEveryMove
+  } yield (SlowTestPlayer(player, newPlayerInstructions, birdInstructions, alwaysWaitTime))
+
+  val someSlowPlayers: Gen[Seq[SlowTestPlayer]] =
+    for {
+      n <- choose(3, 20)
+      ps <- listOfN(n, slowPlayer)
+    } yield {
+      ps.foreach { p => p.initSomeBirds(n)}
+      ps
+    }
 }
 
 
