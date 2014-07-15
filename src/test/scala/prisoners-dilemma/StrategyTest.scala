@@ -51,16 +51,22 @@ object StrategyProperties extends Properties("Various known strategies") {
   }
 
   // TODO: Move titForTat over to birds package, and move both these tests too
+
+  def play(turns: Int, one: RoundStrategy,
+    other: RoundStrategy): (Seq[Move],Seq[Move]) =
+      RoundStrategy.moves(one, other).take(turns).unzip
   property("Tit for Tat copies the prior move, and starts with Cooperate") =
     forAll(strategyGen, Gen.posNum[Int]) {
       (opponent:RoundStrategy, turns: Int) =>
-      val allMoves = RoundStrategy.moves(RoundStrategy.titForTat, opponent).take(turns)
-      val myFirstMove = allMoves.head._1
-      val myMovesExceptTheFirst = allMoves.map(_._1).tail
-      val theirMovesExceptTheLast = allMoves.map(_._2).take(turns - 1)
+      val (myMoves, theirMoves) = play(turns,
+                                       RoundStrategy.titForTat,
+                                       opponent)
+      val myFirstMove = myMoves.head
+      val myOtherMoves = myMoves.tail
+      val theirPriorMoves = theirMoves.take(turns - 1)
 
       (myFirstMove =? Cooperate) &&
-      (myMovesExceptTheFirst =? theirMovesExceptTheLast)
+      (myOtherMoves =? theirPriorMoves)
 
     }
 
