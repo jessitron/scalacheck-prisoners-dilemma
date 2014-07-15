@@ -61,12 +61,11 @@ case class SlowTestPlayer(wrapped: TestPlayer,
 
   def initSomeBirds(numBirds:Int) = {
     // TODO: use instructions to make this sometimes slow
-    val birdInstructionStream = Stream.continually(birdInstructions.toStream).flatten
+    val birdInstructionIterator = Stream.continually(birdInstructions.toStream).flatten.iterator
     val requestedBirds = for {
       i <- 1 to numBirds
-      instrs <- birdInstructionStream
     } yield {
-      val p = SlowStrategy(wrapped.strategy, Stream.continually(instrs.toStream).flatten, alwaysWaitTime)
+      val p = SlowStrategy(wrapped.strategy, Stream.continually(birdInstructionIterator.next()).flatten, alwaysWaitTime)
       () => p
     }
     birdIter = requestedBirds.iterator
