@@ -3,6 +3,7 @@ package prisoners_dilemma
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
 import Package._
+import scala.concurrent.duration._
 
 trait TestPlayer {
   def name: Name
@@ -15,6 +16,60 @@ trait TestPlayer {
   val player = Player(name, new Strategizer {
     def newGame() = strategy
   })
+
+}
+
+sealed trait Instructions
+case object MakeAMove extends Instructions
+case object Failinate extends Instructions
+case class Wait(d: Duration) extends Instructions
+
+case class SlowStrategy(inner: RoundStrategy, instructions: Stream[Instructions]) extends RoundStrategy
+{
+  private val doThese = instructions.iterator
+   val currentMove = inner.currentMove
+   def next(m: Move) = {
+     doThese.next() match {
+       case MakeAMove => inner.next(m)
+       case Failinate => throw new Exception("bird poop")
+       case Wait(d) => Thread.sleep(d.toMillis); next(m)
+     }
+   }
+}
+
+case class SlowTestPlayer(wrapped: TestPlayer,
+  newPlayerInstructions: Seq[Instructions],
+  birdInstructions: Seq[Seq[Instructions]]) extends TestPlayer {
+  def name: Name = wrapped.name
+  def strategy = ???
+  def alwaysCooperates = wrapped.alwaysCooperates
+  def startsFriendly = wrapped.startsFriendly
+  override def isTitForTat = wrapped.isTitForTat
+
+  private[this] def nextBird() = this.synchronized {birdIter.next() }
+
+  override val player = Player(name, new Strategizer {
+    def newGame() = nextBird()()
+  })
+
+  // I'm being strange here to make this thread-safe. Have a better idea?
+  var birdIter: Iterator[() => SlowStrategy] = null
+
+  def initThisManyBirds(numBirds:Int) = {
+    // TODO: use instructions to make this sometimes slow
+    val birdInstructionStream = Stream.continually(birdInstructions.toStream).flatten
+    val requestedBirds = for {
+      i <- 1 to numBirds
+      instrs <- birdInstructionStream
+    } yield {
+      val p = SlowStrategy(wrapped.strategy, Stream.continually(instrs.toStream).flatten)
+      () => p
+    }
+    birdIter = requestedBirds.iterator
+
+  }
+
+
 
 }
 
