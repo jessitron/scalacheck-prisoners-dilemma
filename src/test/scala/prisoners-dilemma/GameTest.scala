@@ -1,5 +1,6 @@
 package prisoners_dilemma
 
+import akka.actor.ActorSystem
 import org.scalacheck._
 import scala.concurrent.duration._
 
@@ -141,6 +142,55 @@ class Timer {
   def now = new java.util.Date().getTime
   val start = now
   def check: Duration = (now - start).millis
+}
+
+object EachOnEachEasyTest extends Properties("Not too many at once") {
+  import Prop._
+  val customConf = com.typesafe.config.ConfigFactory.parseString("""
+      akka {
+        log-dead-letters = 0
+      } """)
+
+  val actorSystem = ActorSystem("big-game-test", customConf)
+
+  property("minimal test") = {
+
+    val alwaysWaitTime = 100.millis
+    val timeLimit = 1.second
+    val rules = Rules(5,3,1,0)
+    val numPlayers = 3
+
+    val players = for {
+      i <- 1 to numPlayers
+    } yield
+      (SlowTestPlayer(ConstantTestPlayer("Sucker #" + i, Cooperate), Seq(), Seq(Seq((MakeAMove))), alwaysWaitTime).initSomeNewGames(2))
+
+
+    val output = Game.eachOnEach(rules)(actorSystem, players.map(_.player), timeLimit)
+
+    // the most turns a player could make
+    // number of matches
+    val maxScorePerTurn = rules.temptationToDefect
+    val maxConceivablePoints = (timeLimit / alwaysWaitTime) * matches(numPlayers) * maxScorePerTurn
+    val happyOutput = output.right.get
+
+    PropForEach.forEach[AggregateOutcome](happyOutput.scores,
+      outcome => outcome.score <= maxConceivablePoints,
+      outcome => s"Wait! But ${outcome.player} got ${outcome.score} points but anything over $maxConceivablePoints is ridiculous."
+    )
+  }
+
+  def matches(numBirds: Int) = combinations(numBirds, 2)
+
+  def combinations(n: Int, k: Int) :Int = if (k == 0) 1 else {
+    n * combinations(n-1,k-1) / k
+  }
+
+  property("combinations works") = {
+    combinations(2, 2) == 1 &&
+    combinations(3, 2) == 3 &&
+    combinations(20,2) == 190
+  }
 }
 
 object GameTest extends Properties("An iterated game of Prisoners Dilemma") {
