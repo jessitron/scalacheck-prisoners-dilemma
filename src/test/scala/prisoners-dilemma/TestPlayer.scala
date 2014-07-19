@@ -25,10 +25,10 @@ case object Failinate extends Instructions
 case class Wait(d: Duration) extends Instructions
 
 case class SlowStrategy(inner: RoundStrategy,
-  instructions: Stream[Instructions],
+  instructions: Seq[Instructions],
   alwaysWaitTime: FiniteDuration) extends RoundStrategy
 {
-  private val doThese = instructions.iterator
+  private val doThese = overAndOverForever(instructions).iterator
    val currentMove = inner.currentMove
    def next(m: Move) = {
      Thread.sleep(alwaysWaitTime.toMillis)
@@ -38,6 +38,8 @@ case class SlowStrategy(inner: RoundStrategy,
        case Wait(d) => Thread.sleep(d.toMillis); next(m)
      }
    }
+
+  override def toString() = s"repeat these instructions: $instructions and wraps strategy: $inner"
 }
 
 case class SlowTestPlayer(wrapped: TestPlayer,
@@ -55,7 +57,7 @@ case class SlowTestPlayer(wrapped: TestPlayer,
   override lazy val player = Player(name, new Strategizer {
     val myStrategization = nextBird()()
     def newGame() = myStrategization
-    override def toString() = s"name (who likes to $myStrategization)"
+    override def toString() = s" who likes to $myStrategization"
   })
 
   // I'm being strange here to make this thread-safe. Have a better idea?
@@ -65,11 +67,11 @@ case class SlowTestPlayer(wrapped: TestPlayer,
   // there must be a better way
   def initSomeNewGames(numBirds:Int) = {
     // TODO: use instructions to make this sometimes slow
-    val birdInstructionIterator = Stream.continually(birdInstructions.toStream).flatten.iterator
+    val birdInstructionIterator = overAndOverForever(birdInstructions.toStream).iterator
     val requestedBirds = for {
       i <- 1 to numBirds
     } yield {
-      val p = SlowStrategy(wrapped.strategy, Stream.continually(birdInstructionIterator.next()).flatten, alwaysWaitTime)
+      val p = SlowStrategy(wrapped.strategy, birdInstructionIterator.next(), alwaysWaitTime)
       () => p
     }
     birdIter = requestedBirds.iterator

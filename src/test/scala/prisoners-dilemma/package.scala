@@ -10,4 +10,7 @@ object Package {
     for { len <- n
           list <- Gen.listOfN(len, g)
     } yield list
+
+  def overAndOverForever[T](seq: Seq[T]): Stream[T] =
+     Stream.continually(seq).flatten
 }
