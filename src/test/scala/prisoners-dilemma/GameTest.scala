@@ -156,7 +156,7 @@ object EachOnEachEasyTest extends Properties("Not too many at once") {
   property("minimal test") = {
 
     val alwaysWaitTime = 100.millis
-    val timeLimit = 1.second
+    val timeLimit = 200.millis
     val rules = Rules(5,3,1,0)
     val numPlayers = 3
 

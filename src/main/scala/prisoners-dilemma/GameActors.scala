@@ -37,10 +37,12 @@ class MatchupActor(matchup: Matchup, rules: Rules, scorekeeper: ActorRef) extend
   }
 
   def receive = {
-    case ((score:ScoreSet) #:: moreRounds) =>
-      scoreRound(score);
+    case (s: Stream[ScoreSet]) =>
+      val score = s.head
+      println(s"Scorinating $s")
+      scoreRound(score)
       scorekeeper ! UpdatedScore(matchup, scoresSoFar)
-      self ! moreRounds
+      self ! s.tail
   }
 
 }

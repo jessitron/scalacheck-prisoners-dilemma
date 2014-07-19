@@ -12,8 +12,10 @@ trait RoundStrategy {
 }
 
 object RoundStrategy {
-  def moves(p1: RoundStrategy, p2: RoundStrategy): Stream[MoveSet] =
+  def moves(p1: RoundStrategy, p2: RoundStrategy): Stream[MoveSet] = {
+    println(s"Calculating a score for $p1 and $p2")
     (p1.currentMove, p2.currentMove) #:: moves(p1.next(p2.currentMove), p2.next(p1.currentMove))
+  }
 
   class HistoricalRecord(wrapped: RoundStrategy, history: Seq[Move]) extends RoundStrategy {
     val currentMove = wrapped.currentMove

@@ -24,22 +24,31 @@ case object MakeAMove extends Instructions
 case object Failinate extends Instructions
 case class Wait(d: Duration) extends Instructions
 
-case class SlowStrategy(inner: RoundStrategy,
+object SlowStrategy {
+  def apply(inner: RoundStrategy,
   instructions: Seq[Instructions],
-  alwaysWaitTime: FiniteDuration) extends RoundStrategy
-{
-  private val doThese = overAndOverForever(instructions).iterator
-   val currentMove = inner.currentMove
-   def next(m: Move) = {
-     Thread.sleep(alwaysWaitTime.toMillis)
-     doThese.next() match {
-       case MakeAMove => inner.next(m)
-       case Failinate => throw new Exception("bird poop")
-       case Wait(d) => Thread.sleep(d.toMillis); next(m)
-     }
-   }
+  alwaysWaitTime: FiniteDuration):  RoundStrategy =
+    new InnerSlowStrategy(inner =>  s"repeat these instructions: $instructions and wraps strategy: $inner",
+        overAndOverForever(instructions).iterator,
+        inner,
+        alwaysWaitTime)
+}
 
-  override def toString() = s"repeat these instructions: $instructions and wraps strategy: $inner"
+private class InnerSlowStrategy(printout: RoundStrategy => String, instructionIter: Iterator[Instructions], latestInner: RoundStrategy, waitTime: FiniteDuration) extends RoundStrategy {
+  val guid = Math.random()    // TODO: delete
+
+  val currentMove = latestInner.currentMove
+  def next(m: Move): InnerSlowStrategy = {
+    println(s"Yo, I am at $guid and I have peen ping-ed")
+    Thread.sleep(waitTime.toMillis)
+    instructionIter.next() match {
+      case MakeAMove =>  new InnerSlowStrategy(printout, instructionIter, latestInner.next(m), waitTime)
+      case Failinate => throw new Exception("bird poop")
+      case Wait(d) => Thread.sleep(d.toMillis); next(m)
+    }
+  }
+
+  override def toString() = printout(latestInner)
 }
 
 case class SlowTestPlayer(wrapped: TestPlayer,
@@ -61,7 +70,7 @@ case class SlowTestPlayer(wrapped: TestPlayer,
   })
 
   // I'm being strange here to make this thread-safe. Have a better idea?
-  var birdIter: Iterator[() => SlowStrategy] = null
+  var birdIter: Iterator[() => RoundStrategy] = null
 
   // This is because I can't figure out how to make NewGame be thread-safe and still pull from one stream of instructions sets
   // there must be a better way
