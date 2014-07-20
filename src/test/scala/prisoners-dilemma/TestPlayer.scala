@@ -28,21 +28,19 @@ object SlowStrategy {
   def apply(inner: RoundStrategy,
   instructions: Seq[Instructions],
   alwaysWaitTime: FiniteDuration):  RoundStrategy =
-    new InnerSlowStrategy(inner =>  s"repeat these instructions: $instructions and wraps strategy: $inner",
+    new SlowStrategy(inner =>  s"repeat these instructions: $instructions and wraps strategy: $inner",
         overAndOverForever(instructions).iterator,
         inner,
         alwaysWaitTime)
 }
 
-private class InnerSlowStrategy(printout: RoundStrategy => String, instructionIter: Iterator[Instructions], latestInner: RoundStrategy, waitTime: FiniteDuration) extends RoundStrategy {
-  val guid = Math.random()    // TODO: delete
+class SlowStrategy private (printout: RoundStrategy => String, instructionIter: Iterator[Instructions], latestInner: RoundStrategy, waitTime: FiniteDuration) extends RoundStrategy {
 
   val currentMove = latestInner.currentMove
-  def next(m: Move): InnerSlowStrategy = {
-    println(s"Yo, I am at $guid and I have peen ping-ed")
+  def next(m: Move): SlowStrategy = {
     Thread.sleep(waitTime.toMillis)
     instructionIter.next() match {
-      case MakeAMove =>  new InnerSlowStrategy(printout, instructionIter, latestInner.next(m), waitTime)
+      case MakeAMove =>  new SlowStrategy(printout, instructionIter, latestInner.next(m), waitTime)
       case Failinate => throw new Exception("bird poop")
       case Wait(d) => Thread.sleep(d.toMillis); next(m)
     }
@@ -94,21 +92,20 @@ object SlowTestPlayer {
 
   val waitTime: Gen[Wait] = choose(10,500).map(_.millis).map(Wait(_))
   val oneInstruction: Gen[Instructions] = oneOf(const(MakeAMove), const(Failinate), waitTime)
-  val someInstructions: Gen[Seq[Instructions]] = Package.someOf(choose(1, 100), oneInstruction)
-  val multipleBirdInstructions = Package.someOf(choose(1,20), someInstructions)
-  val timeToWaitEveryMove: Gen[FiniteDuration] = Gen.choose(50, 100).map(_.millis)
+  val someInstructions: Gen[Seq[Instructions]] = Package.someOf(choose(1, Package.maxTurnsPerGame), oneInstruction)
+  val timeToWaitEveryMove: Gen[FiniteDuration] = Gen.choose(Package.MIN_TURN_TIME.toMillis, 100).map(_.millis)
 
-  private val slowPlayer: Gen[SlowTestPlayer] = for {
+  private def slowPlayer(maxOpponents: Int) : Gen[SlowTestPlayer] = for {
     player <- TestPlayer.someStandardPlayer
     newPlayerInstructions <- someInstructions
-    birdInstructions <- multipleBirdInstructions
+    birdInstructions <- Package.someOf(choose(1,maxOpponents), someInstructions)
     alwaysWaitTime <- timeToWaitEveryMove
   } yield (SlowTestPlayer(player, newPlayerInstructions, birdInstructions, alwaysWaitTime))
 
   val someSlowPlayers: Gen[Seq[SlowTestPlayer]] =
     for {
       n <- choose(3, 20)
-      ps <- listOfN(n, slowPlayer)
+      ps <- listOfN(n, slowPlayer(n - 1))
     } yield {
       ps.foreach { p => p.initSomeNewGames(n)}
       ps

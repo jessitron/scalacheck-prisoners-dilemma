@@ -28,12 +28,49 @@ object GameGen {
 
 }
 
+object Pretties {
+  // if this works, move it
+  import org.scalacheck.util.Pretty
+  implicit def prettyRules(t: Rules) = Pretty { p => s"T = ${t.temptationToDefect}\n" +
+    s"       R = ${t.rewardForMutualCooperation}\n" +
+    s"       P = ${t.punishmentForMutualDefection}\n" +
+    s"       S = ${t.suckersPenalty}\n"
+  }
+
+  implicit def instructionSet(t: Seq[Instructions]) = Pretty { params =>
+    "[" + t.map {
+      case MakeAMove => "M"
+      case Failinate => "F"
+      case Wait(d) => d.toMillis.toString
+    }.mkString(",") + "]"
+  }
+  implicit def multipleBirdInstructions(t: Seq[Seq[Instructions]]) = Pretty {
+    params =>
+      t.zipWithIndex.map {
+        case (instrs, i) => s"Bird $i: " + instructionSet(instrs)(params)
+      }.mkString("\n")
+  }
+
+  implicit def slowPlayer(t: SlowTestPlayer) = Pretty { p =>
+    t.wrapped.toString +
+    s" who always waits ${t.alwaysWaitTime}" +
+    s" and has these bird instructions: \n" + multipleBirdInstructions(t.birdInstructions)(p)
+  }
+
+  implicit def playerSeq(t: Seq[SlowTestPlayer]) = Pretty { params =>
+    s"${t.size} players:\n " +
+    t.map(pl => slowPlayer(pl)(params)).mkString("\n ")
+  }
+}
+import Pretties._
+
 object BigGameTest2 extends Properties("A free-for-all") {
   import Prop._
   import GameGen._
   import RuleGenerators._
   import akka.actor._
   import PropForEach.forEach
+
 
   val fudge = 300.millis
 
@@ -109,7 +146,7 @@ object BigGameTest extends Properties("A free-for-all") {
     Prop.all(players.map(p => results.exists(_.player == p) :| "No results for $p"):_*)
 
  property("All games end within the time limit") =
-  forAll(ruleGen(20) :| "Rules", SlowTestPlayer.someSlowPlayers :| "Players", reasonableTimeLimit) {
+  forAll(ruleGen(20) :| "Rules", SlowTestPlayer.someSlowPlayers :| "Players", reasonableTimeLimit :| "Time limit") {
   (rules: Rules, testPlayers: Seq[SlowTestPlayer], timeLimit: FiniteDuration) =>
       (testPlayers.length >= 3) ==> { // Don't shrink too far
    classify(testPlayers.size < 10, "small", "large") {
