@@ -167,7 +167,7 @@ object EachOnEachEasyTest extends Properties("Not too many at once") {
     val players = for {
       i <- 1 to numPlayers
     } yield
-      (SlowTestPlayer(ConstantTestPlayer("Sucker #" + i, Cooperate), Seq(), Seq(Seq((MakeAMove))), alwaysWaitTime).initSomeNewGames(2))
+      (SlowTestPlayer(ConstantTestPlayer("Sucker #" + i, Cooperate), Seq(), Seq(Seq((MakeAMove))), alwaysWaitTime))
 
 
     val output = Game.eachOnEach(rules)(actorSystem, players.map(_.player), timeLimit)

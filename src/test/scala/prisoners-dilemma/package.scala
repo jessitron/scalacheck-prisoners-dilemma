@@ -15,6 +15,8 @@ object Package {
   def overAndOverForever[T](seq: Seq[T]): Stream[T] =
      Stream.continually(seq).flatten
 
+  val MAX_BIRDS_IN_POPULATION = 20
+
   val MIN_TURN_TIME = 50.millis
   val MAX_TIME_LIMIT_PER_TEST = 900.millis
   val maxTurnsPerGame: Int = (MAX_TIME_LIMIT_PER_TEST / MIN_TURN_TIME).toInt

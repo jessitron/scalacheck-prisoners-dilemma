@@ -72,7 +72,7 @@ case class SlowTestPlayer(wrapped: TestPlayer,
 
   // This is because I can't figure out how to make NewGame be thread-safe and still pull from one stream of instructions sets
   // there must be a better way
-  def initSomeNewGames(numBirds:Int) = {
+  private[this] def initSomeNewGames(numBirds:Int) = {
     // TODO: use instructions to make this sometimes slow
     val birdInstructionIterator = overAndOverForever(birdInstructions.toStream).iterator
     val requestedBirds = for {
@@ -84,6 +84,7 @@ case class SlowTestPlayer(wrapped: TestPlayer,
     birdIter = requestedBirds.iterator
     this
   }
+  initSomeNewGames(MAX_BIRDS_IN_POPULATION)
 }
 
 object SlowTestPlayer {
@@ -104,12 +105,9 @@ object SlowTestPlayer {
 
   val someSlowPlayers: Gen[Seq[SlowTestPlayer]] =
     for {
-      n <- choose(3, 20)
+      n <- choose(3, MAX_BIRDS_IN_POPULATION)
       ps <- listOfN(n, slowPlayer(n - 1))
-    } yield {
-      ps.foreach { p => p.initSomeNewGames(n)}
-      ps
-    }
+    } yield ps
 }
 
 
@@ -165,7 +163,7 @@ object TestPlayer {
     Gen.oneOf(constantMovePlayer, consistentMovePlayer)
 
   val someStandardPlayers: Gen[Seq[TestPlayer]] =
-    someOf(Gen.choose(3, 20), someStandardPlayer)
+    someOf(Gen.choose(3, MAX_BIRDS_IN_POPULATION), someStandardPlayer)
 
 
 }
