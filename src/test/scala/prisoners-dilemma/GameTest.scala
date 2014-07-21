@@ -1,6 +1,7 @@
 package prisoners_dilemma
 
 import akka.actor.ActorSystem
+import akka.testkit.TestProbe
 import org.scalacheck._
 import scala.concurrent.duration._
 import Pretties._
@@ -102,6 +103,7 @@ object BigGameTest extends Properties("A free-for-all") {
   val customConf = com.typesafe.config.ConfigFactory.parseString("""
       akka {
         log-dead-letters = 0
+        loglevel = OFF
       }
       """)
 
@@ -130,8 +132,8 @@ object BigGameTest extends Properties("A free-for-all") {
        (timeTaken <= (timeLimit + fudge)) :| s"$timeTaken was longer than $timeLimit" &&
        (output match {
          case Right(EachOnEachOutcome(output, actorRef)) =>
-          actorRef.isTerminated :| "Actor shut down" &&
-          eachPlayerGetsAResult(players, output)
+          eachPlayerGetsAResult(players, output) &&
+           didShutDown(actorSystem, actorRef)
          case Left(_) =>
           Prop.passed
        })
@@ -139,6 +141,19 @@ object BigGameTest extends Properties("A free-for-all") {
    }
    }
   }
+
+  def didShutDown(actorSystem: ActorSystem, actorRef: ActorRef): Prop = {
+    val maxWait = 2.seconds
+    val timer = new Timer()
+    val probe = new TestProbe(actorSystem)
+    probe.watch(actorRef)
+    try {
+      probe.expectMsgPF(maxWait){ case Terminated(actorRef) => true }
+    } catch { case ae: AssertionError => false :| s"actor not terminated within $maxWait"}
+    finally { println("Termination took " + timer.check)}
+    true
+  }
+
 
 }
 
